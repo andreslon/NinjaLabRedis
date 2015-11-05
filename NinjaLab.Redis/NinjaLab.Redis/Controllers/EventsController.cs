@@ -18,6 +18,7 @@ namespace NinjaLab.Redis.Controllers
         // GET: Events
         public ActionResult Index()
         {
+            //RedisHelper.GetAll();
             return View(db.Events.ToList());
         }
 

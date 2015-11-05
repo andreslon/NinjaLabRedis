@@ -12,17 +12,30 @@ namespace NinjaLab.Redis.Helpers
     public class RedisHelper
     {
         private static ConnectionMultiplexer redis;
+        private static string serverName = "ninjalabredis.redis.cache.windows.net";
+        private static string stringConnection = serverName + ",abortConnect=false,ssl=true,password=hUIb6nVH9fqb3/xjgWNsLYZdSi9lhIPL4HxCIJIlD3E=";
 
         public static IDatabase GetDatabase()
         {
             if (redis == null)
             {
-                var server =
-                 "ninjalabredis.redis.cache.windows.net,abortConnect=false,ssl=true,password=hUIb6nVH9fqb3/xjgWNsLYZdSi9lhIPL4HxCIJIlD3E=";
-                redis = ConnectionMultiplexer.Connect(server);
+
+                redis = ConnectionMultiplexer.Connect(stringConnection);
             }
             return redis.GetDatabase();
         }
+
+        public static List<Event> GetAll()
+        {
+            List<Event> lstEvents = new List<Event>();
+            var server = redis.GetServer(serverName);
+            foreach (var key in server.Keys(pattern: "event_*"))
+            {
+                lstEvents.Add(GetEvent(Guid.Parse(key.ToString())));
+            }
+            return lstEvents;
+        }
+
         public static Event GetEvent(Guid guid)
         {
             var db = GetDatabase();
