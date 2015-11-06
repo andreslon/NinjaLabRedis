@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
+using NinjaLab.Redis.Helpers;
 
 namespace NinjaLab.Redis.Controllers
 {
@@ -10,6 +11,7 @@ namespace NinjaLab.Redis.Controllers
     {
         public ActionResult Index()
         {
+            RedisHelper.test();
             return View();
         }
 

@@ -1,62 +1,92 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Web;
 using Newtonsoft.Json;
 using NinjaLab.Redis.Models;
-using StackExchange.Redis;
+using ServiceStack.Redis;
+using ServiceStack.Text;
 
 namespace NinjaLab.Redis.Helpers
 {
     public class RedisHelper
     {
-        private static ConnectionMultiplexer redis;
-        private static string serverName = "ninjalabredis.redis.cache.windows.net";
-        private static string stringConnection = serverName + ",abortConnect=false,ssl=true,password=hUIb6nVH9fqb3/xjgWNsLYZdSi9lhIPL4HxCIJIlD3E=";
-
-        public static IDatabase GetDatabase()
+        private const string RedisUri = "BoCg/iKfaH4dK96UZoBbdkSZx7MFTiy4Nn56h3AR0C8=@ninjalabredis.redis.cache.windows.net?ssl=true";
+        private static PooledRedisClientManager clientsManager;
+        private static IRedisClient redisClient;
+        public static void RedisConnection()
         {
-            if (redis == null)
+            if (redisClient == null)
             {
-
-                redis = ConnectionMultiplexer.Connect(stringConnection);
+                clientsManager = new PooledRedisClientManager(RedisUri);
+                if (redisClient == null)
+                {
+                    redisClient = clientsManager.GetClient();
+                }
             }
-            return redis.GetDatabase();
+        }
+
+
+        public static void test()
+        {
+
+            var id = Guid.NewGuid();
+            Set(new Event() { Id = id, Comment = "SSD", Title = "dasdsadsa" });
+            Set(new Event() { Id = id, Comment = "gggggg", Title = "aaaaaaa" });
+            var dd = Get(id.ToString());
+            Remove(id.ToString());
         }
 
         public static List<Event> GetAll()
         {
-            List<Event> lstEvents = new List<Event>();
-            var server = redis.GetServer(serverName);
-            foreach (var key in server.Keys(pattern: "event_*"))
+            RedisConnection();
+
+            var lstEvents = new List<Event>();
+            foreach (var key in redisClient.GetAllKeys())
             {
-                lstEvents.Add(GetEvent(Guid.Parse(key.ToString())));
+                try
+                {
+                    lstEvents.Add(Get(key));
+                }
+                catch (Exception)
+                {
+                     
+                }
+              
             }
             return lstEvents;
         }
 
-        public static Event GetEvent(Guid guid)
+        public static Event Get(string id)
         {
-            var db = GetDatabase();
-            var eventResult = db.StringGet(guid.ToString());
-            if (eventResult.IsNullOrEmpty)
-            {
-                return null;
-            }
-            return JsonConvert.DeserializeObject<Event>(eventResult);
+            RedisConnection();
+
+            var response = redisClient.Get<string>(id);
+
+          
+            return JsonConvert.DeserializeObject<Event>(response);
+            //return JsonConvert.DeserializeObject<Event>(redisClient.Get<string>(id.ToString()));
+            //return redisClient.Get<Event>(id.ToString());
+        }
+        public static bool Remove(string id)
+        {
+            RedisConnection();
+
+            return redisClient.Remove(id);
         }
 
-        public static void SetEvent(Event @event)
+        public static bool Set(Event @event)
         {
-            var db = RedisHelper.GetDatabase();
-            db.StringSet(@event.Id.ToString(), JsonConvert.SerializeObject(@event));
+            RedisConnection();
+            // Save a guid instance in Redis  
+           return redisClient.Set(@event.Id.ToString(), JsonConvert.SerializeObject(@event));
+            //redisClient.Store(@event);
         }
 
-        public static void DeleteEvent(Guid guid)
-        {
-            var db = RedisHelper.GetDatabase();
-            db.KeyDelete(guid.ToString());
-        }
+
+
+
+
+
     }
 }
