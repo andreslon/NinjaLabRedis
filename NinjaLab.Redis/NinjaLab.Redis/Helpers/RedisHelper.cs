@@ -11,82 +11,54 @@ namespace NinjaLab.Redis.Helpers
 {
     public class RedisHelper
     {
-        private const string RedisUri = "BoCg/iKfaH4dK96UZoBbdkSZx7MFTiy4Nn56h3AR0C8=@ninjalabredis.redis.cache.windows.net?ssl=true";
-        private static PooledRedisClientManager clientsManager;
+        //Cadena de conexión del servicio creado en Azure [password]@[rediscache]?ssl=true
+        private const string RedisUri =
+            "LkjmVSfgq3QudyrTIvsIjUZSEijb++ZF7U/5D5lp2xY=@ninjacampredis.redis.cache.windows.net?ssl=true";
         private static IRedisClient redisClient;
+
+        //Método requerido para establecer una conexión con el servicio de Redis
         public static void RedisConnection()
         {
             if (redisClient == null)
             {
-                clientsManager = new PooledRedisClientManager(RedisUri);
-                if (redisClient == null)
-                {
-                    redisClient = clientsManager.GetClient();
-                }
+                var clientsManager = new PooledRedisClientManager(RedisUri);
+                redisClient = clientsManager.GetClient();
             }
         }
-
-
-        public static void test()
-        {
-
-            var id = Guid.NewGuid();
-            Set(new Event() { Id = id, Comment = "SSD", Title = "dasdsadsa" });
-            Set(new Event() { Id = id, Comment = "gggggg", Title = "aaaaaaa" });
-            var dd = Get(id.ToString());
-            Remove(id.ToString());
-        }
-
+        //Permite Obtener la lista completa de datos almacenados en Redis
         public static List<Event> GetAll()
         {
             RedisConnection();
-
             var lstEvents = new List<Event>();
-            foreach (var key in redisClient.GetAllKeys())
+            var keys = redisClient.GetAllKeys();
+            if (keys != null && keys.Count() > 0)
             {
-                try
+                var eventsResult = redisClient.GetAll<string>(keys);
+                foreach (var @event in eventsResult)
                 {
-                    lstEvents.Add(Get(key));
+                    lstEvents.Add(JsonConvert.DeserializeObject<Event>(@event.Value));
                 }
-                catch (Exception)
-                {
-                     
-                }
-              
             }
             return lstEvents;
         }
-
+        //Permite obtener solo el registro correspondiente a un Id
         public static Event Get(string id)
         {
             RedisConnection();
-
             var response = redisClient.Get<string>(id);
-
-          
-            return JsonConvert.DeserializeObject<Event>(response);
-            //return JsonConvert.DeserializeObject<Event>(redisClient.Get<string>(id.ToString()));
-            //return redisClient.Get<Event>(id.ToString());
+            return response != null ? JsonConvert.DeserializeObject<Event>(response) : null;
         }
+        //Permite remover o eliminar un registro de la cache según su Id
         public static bool Remove(string id)
         {
             RedisConnection();
-
             return redisClient.Remove(id);
         }
-
+        //Permite almacenar o guardar un registro en redis cache con su Id respectivo
         public static bool Set(Event @event)
         {
             RedisConnection();
-            // Save a guid instance in Redis  
-           return redisClient.Set(@event.Id.ToString(), JsonConvert.SerializeObject(@event));
-            //redisClient.Store(@event);
+            return redisClient.Set(@event.Id.ToString(), JsonConvert.SerializeObject(@event));
         }
-
-
-
-
-
-
     }
 }

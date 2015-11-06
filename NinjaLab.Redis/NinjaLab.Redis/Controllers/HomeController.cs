@@ -11,7 +11,6 @@ namespace NinjaLab.Redis.Controllers
     {
         public ActionResult Index()
         {
-            RedisHelper.test();
             return View();
         }
 
